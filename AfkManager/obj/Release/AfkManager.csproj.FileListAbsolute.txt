@@ -10,3 +10,4 @@
 /home/claude/cs2-afk-manager/AfkManager/obj/Release/refint/AfkManager.dll
 /home/claude/cs2-afk-manager/AfkManager/obj/Release/AfkManager.pdb
 /home/claude/cs2-afk-manager/AfkManager/obj/Release/ref/AfkManager.dll
+/home/claude/cs2-afk-manager/AfkManager/obj/Release/AfkManager.sourcelink.json

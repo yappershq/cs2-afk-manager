@@ -386,7 +386,7 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
         if (admin is null)
             return false; // Not an admin
 
-        var requiredFlag = _config.AdminsFlag;
+        var requiredFlag = _config.AdminsPermission;
         if (string.IsNullOrWhiteSpace(requiredFlag))
             return true; // Any admin = immune
 

@@ -52,7 +52,7 @@ internal interface IAfkConfig
     int AdminsImmune { get; }
 
     /// <summary>Permission flag required for immunity. Empty = any admin.</summary>
-    string AdminsFlag { get; }
+    string AdminsPermission { get; }
 
     /// <summary>
     /// How many distinct button-state changes to track before clearing AFK status.
@@ -87,7 +87,7 @@ internal sealed class AfkConfig : IAfkConfig
     private readonly IConVar? _cvMinPlayersMove;
     private readonly IConVar? _cvMinPlayersKick;
     private readonly IConVar? _cvAdminsImmune;
-    private readonly IConVar? _cvAdminsFlag;
+    private readonly IConVar? _cvAdminsPermission;
     private readonly IConVar? _cvButtonsBuffer;
     private readonly IConVar? _cvExcludeDead;
     private readonly IConVar? _cvSpawnTime;
@@ -109,7 +109,7 @@ internal sealed class AfkConfig : IAfkConfig
         _cvMinPlayersMove = cv.CreateConVar("afk_move_min_players", 4,     "Minimum players required for move feature");
         _cvMinPlayersKick = cv.CreateConVar("afk_kick_min_players", 6,     "Minimum players required for kick feature");
         _cvAdminsImmune   = cv.CreateConVar("afk_admins_immune",    1,     "Admin immunity: 0=none, 1=full, 2=kick immunity, 3=move immunity");
-        _cvAdminsFlag     = cv.CreateConVar("afk_admins_flag",      "",    "Admin permission flag for immunity (empty = any admin flag)");
+        _cvAdminsPermission = cv.CreateConVar("afk_admins_permission", "",    "Admin permission required for AFK immunity (empty = any admin). IAdmin.HasPermission style: @afkmanager/immune, admin:slay etc.");
         _cvButtonsBuffer  = cv.CreateConVar("afk_buttons_buffer",   5,     "Distinct button-state changes to track before clearing AFK (0=disabled)");
         _cvExcludeDead    = cv.CreateConVar("afk_exclude_dead",     false, "Exclude dead players from AFK checks");
         _cvSpawnTime      = cv.CreateConVar("afk_spawn_time",       20,    "Seconds after spawn a player must begin moving (0=disabled)");
@@ -128,7 +128,7 @@ internal sealed class AfkConfig : IAfkConfig
     public int    MinPlayersMove => _cvMinPlayersMove?.GetInt32() ?? 4;
     public int    MinPlayersKick => _cvMinPlayersKick?.GetInt32() ?? 6;
     public int    AdminsImmune   => _cvAdminsImmune?.GetInt32() ?? 1;
-    public string AdminsFlag     => _cvAdminsFlag?.GetString() ?? "";
+    public string AdminsPermission     => _cvAdminsPermission?.GetString() ?? "";
     public int    ButtonsBuffer  => _cvButtonsBuffer?.GetInt32() ?? 5;
     public bool   ExcludeDead    => _cvExcludeDead?.GetBool()  ?? false;
     public int    SpawnTime      => _cvSpawnTime?.GetInt32()   ?? 20;

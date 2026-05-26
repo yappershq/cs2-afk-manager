@@ -42,7 +42,7 @@ This port: yappershq — adapted for CS2 / [ModSharp](https://github.com/Kxnrl/m
 | `afk_spawn_time` | `20` | Seconds after spawn player must begin moving (0 = disabled) |
 | `afk_spawn_warn_time` | `15` | Seconds before spawn-move at which warning fires |
 | `afk_admins_immune` | `1` | Admin immunity: 0 = none, 1 = full, 2 = kick only, 3 = move only |
-| `afk_admins_flag` | `` | Permission flag for immunity (empty = any admin) |
+| `afk_admins_permission` | `` | Permission required for immunity (empty = any admin) |
 | `afk_buttons_buffer` | `5` | Distinct button-state changes to track (0 = disabled) |
 | `afk_exclude_dead` | `false` | Skip dead players in AFK checks |
 
