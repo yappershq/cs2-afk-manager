@@ -1,0 +1,23 @@
+{
+  "AFK_Prefix": {
+    "en-US": "{{olive}}[{{green}}AFK Manager{{olive}}]{{default}}"
+  },
+  "AFK_Move_Warning": {
+    "en-US": "You will be moved to spectator in {{red}}{0}{{default}} seconds for being AFK."
+  },
+  "AFK_Kick_Warning": {
+    "en-US": "You will be kicked in {{red}}{0}{{default}} seconds for being AFK."
+  },
+  "AFK_Spawn_Move_Warning": {
+    "en-US": "You must move from your spawn position within {{red}}{0}{{default}} seconds or be moved to spectator."
+  },
+  "AFK_Move_Announce": {
+    "en-US": "{{green}}{0}{{default}} has been moved to spectator for being AFK."
+  },
+  "AFK_Kick_Announce": {
+    "en-US": "{{green}}{0}{{default}} has been kicked for being AFK."
+  },
+  "AFK_Kick_Message": {
+    "en-US": "You were kicked for being AFK."
+  }
+}

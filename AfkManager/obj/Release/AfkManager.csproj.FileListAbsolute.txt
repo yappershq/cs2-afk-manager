@@ -1,0 +1,12 @@
+/home/claude/cs2-afk-manager/AfkManager/obj/Release/AfkManager.csproj.AssemblyReference.cache
+/home/claude/cs2-afk-manager/AfkManager/obj/Release/AfkManager.GeneratedMSBuildEditorConfig.editorconfig
+/home/claude/cs2-afk-manager/AfkManager/obj/Release/AfkManager.AssemblyInfoInputs.cache
+/home/claude/cs2-afk-manager/AfkManager/obj/Release/AfkManager.AssemblyInfo.cs
+/home/claude/cs2-afk-manager/AfkManager/obj/Release/AfkManager.csproj.CoreCompileInputs.cache
+/home/claude/cs2-afk-manager/.build/modules/AfkManager/AfkManager.deps.json
+/home/claude/cs2-afk-manager/.build/modules/AfkManager/AfkManager.dll
+/home/claude/cs2-afk-manager/.build/modules/AfkManager/AfkManager.pdb
+/home/claude/cs2-afk-manager/AfkManager/obj/Release/AfkManager.dll
+/home/claude/cs2-afk-manager/AfkManager/obj/Release/refint/AfkManager.dll
+/home/claude/cs2-afk-manager/AfkManager/obj/Release/AfkManager.pdb
+/home/claude/cs2-afk-manager/AfkManager/obj/Release/ref/AfkManager.dll
