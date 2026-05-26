@@ -12,4 +12,18 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
   </ItemGroup>
 
+  <!-- Copy .assets/* (locales, particles, etc) into .build/ so modsharp-deploy bundles them -->
+  <Target Name="CopyAssets" AfterTargets="Build">
+    <PropertyGroup>
+      <AssetsDir>$(MSBuildThisFileDirectory)..\.assets\</AssetsDir>
+      <BuildDir>$(MSBuildThisFileDirectory)..\.build\</BuildDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_AssetFiles Include="$(AssetsDir)**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_AssetFiles)"
+          DestinationFiles="@(_AssetFiles -> '$(BuildDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>
