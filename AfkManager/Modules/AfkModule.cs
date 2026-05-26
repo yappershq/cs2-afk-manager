@@ -142,12 +142,10 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
             _logger.LogWarning("[AfkManager] AdminManager not available — !afk_spec registered without permission check");
         }
 
-        // Populate initial state for already-connected players (late-load scenario)
-        foreach (var client in _bridge.ClientManager.GetGameClients(inGame: true))
-        {
-            if (!client.IsFakeClient)
-                InitializePlayer(client);
-        }
+        // Note: do NOT iterate ClientManager.GetGameClients() here. At
+        // OnAllModulesLoaded the engine has no active session yet and the call
+        // throws "You can not call this now." Players are seeded incrementally
+        // via IClientListener.OnClientPutInServer as they connect.
 
         UpdateEnabledState();
         UpdateMinPlayers();
