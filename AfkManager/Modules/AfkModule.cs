@@ -51,8 +51,9 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
     private readonly int            []  _obsMode          = new int            [64]; // -1 = unknown
     private readonly int            []  _obsTargetSlot    = new int            [64]; // -1 = unknown
 
-    // Frame-accumulator for the per-second check sweep.
-    private double _nextCheckAt;
+    // Frame-accumulator for the per-second check sweep. Starts disabled (MaxValue) so no sweep
+    // runs until OnGameActivate arms it — the sweep touches ClientManager, unsafe before `sv` set.
+    private double _nextCheckAt = double.MaxValue;
 
     // Hook delegates kept alive
     private Action<IPlayerRunCommandHookParams, HookReturnValue<EmptyHookReturn>>? _runCmdPost;
@@ -142,13 +143,13 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
             _logger.LogWarning("[AfkManager] AdminManager not available — !afk_spec registered without permission check");
         }
 
-        // Note: do NOT iterate ClientManager.GetGameClients() here. At
-        // OnAllModulesLoaded the engine has no active session yet and the call
-        // throws "You can not call this now." Players are seeded incrementally
-        // via IClientListener.OnClientPutInServer as they connect.
-
-        UpdateEnabledState();
-        UpdateMinPlayers();
+        // Do NOT touch ClientManager here. At OnAllModulesLoaded the engine has no active
+        // session — `sv` is null, and ClientManager.GetGameClient(slot) (singular) has NO
+        // null-sv guard, so it dereferences a null native pointer. That AccessViolation fires
+        // during bootstrap before the managed exception handler is installed → the process is
+        // terminated with exit code 0 (this is exactly what crash-looped the server).
+        // _enabled/_canMove/_canKick default to false (safe). They're refreshed in
+        // OnGameActivate (fires after `sv` is set) and on every sweep, so nothing is needed here.
     }
 
     public void Shutdown()
@@ -178,7 +179,13 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
 
     public void OnGameInit()     { }
     public void OnGamePostInit() { }
-    public void OnGameActivate() => UpdateEnabledState();
+    public void OnGameActivate()
+    {
+        // Now safe — `sv`/globals are set. Seed state and defer the first AFK sweep one interval.
+        UpdateEnabledState();
+        UpdateMinPlayers();
+        _nextCheckAt = _bridge.ModSharp.GetGlobals().CurTime + CheckIntervalSec;
+    }
     public void OnGameDeactivate() { }
     public void OnRoundRestart()   { }
     public void OnRoundRestarted() { }
@@ -432,7 +439,7 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
             return; // fully immune or not initialized
 
         var controller = client.GetPlayerController();
-        if (controller is null)
+        if (controller is not { IsValidEntity: true })
             return;
 
         var team = controller.Team;
@@ -588,7 +595,7 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
 
         // Move to spectator
         var controller = client.GetPlayerController();
-        if (controller is not null && controller.Team != CStrikeTeam.Spectator)
+        if (controller is { IsValidEntity: true } && controller.Team != CStrikeTeam.Spectator)
         {
             controller.SwitchTeam(CStrikeTeam.Spectator);
         }
