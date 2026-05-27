@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Sharp.Shared.Managers;
 using Sharp.Shared.Objects;
 
@@ -114,6 +115,15 @@ internal sealed class AfkConfig : IAfkConfig
         _cvExcludeDead    = cv.CreateConVar("afk_exclude_dead",     false, "Exclude dead players from AFK checks");
         _cvSpawnTime      = cv.CreateConVar("afk_spawn_time",       20,    "Seconds after spawn a player must begin moving (0=disabled)");
         _cvWarnSpawnTime  = cv.CreateConVar("afk_spawn_warn_time",  15,    "Seconds before spawn-kick at which warning fires");
+
+        // Generate/load editable config at sharp/configs/afkmanager.cfg (NukoLevelRank style).
+        var logger = bridge.LoggerFactory.CreateLogger("AfkManager.Config");
+        IConVar?[] all = [_cvEnabled, _cvTimeToMove, _cvWarnTimeToMove, _cvMoveToSpec, _cvMoveAnnounce,
+                          _cvTimeToKick, _cvWarnTimeToKick, _cvKickMode, _cvKickAnnounce,
+                          _cvMinPlayersMove, _cvMinPlayersKick, _cvAdminsImmune, _cvAdminsPermission,
+                          _cvButtonsBuffer, _cvExcludeDead, _cvSpawnTime, _cvWarnSpawnTime];
+        ConVarConfigFile.Sync(bridge.SharpPath, "afkmanager.cfg", "AfkManager", logger,
+            System.Array.FindAll(all, c => c is not null)!);
     }
 
     public bool   Enabled        => _cvEnabled?.GetBool()     ?? true;
