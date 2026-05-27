@@ -50,7 +50,7 @@ internal static class ConVarConfigFile
                 continue;
             if (!string.IsNullOrWhiteSpace(cv.HelpString))
                 sb.Append("// ").Append(cv.HelpString).Append('\n');
-            sb.Append(cv.Name).Append(' ').Append(Quote(cv.DefaultValue)).Append("\n\n");
+            sb.Append(cv.Name).Append(' ').Append(Quote(cv.GetString())).Append("\n\n");
         }
 
         File.WriteAllText(path, sb.ToString());
