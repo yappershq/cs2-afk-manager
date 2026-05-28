@@ -105,16 +105,16 @@ internal sealed class AfkConfig : IAfkConfig
         _cvMoveAnnounce   = cv.CreateConVar("afk_move_announce",    1,     "Announce AFK moves: 0=none, 1=everyone, 2=admins only");
         _cvTimeToKick     = cv.CreateConVar("afk_kick_time",        120,   "Seconds idle before kicking (0=disabled)");
         _cvWarnTimeToKick = cv.CreateConVar("afk_kick_warn_time",   30,    "Seconds before kick at which warning fires");
-        _cvKickMode       = cv.CreateConVar("afk_kick_mode",        1,     "Who to kick: 0=disabled, 1=all, 2=active teams only, 3=spectators only");
+        _cvKickMode       = cv.CreateConVar("afk_kick_mode",        2,     "Who to kick: 0=disabled, 1=all, 2=active teams only (skip spectators), 3=spectators only");
         _cvKickAnnounce   = cv.CreateConVar("afk_kick_announce",    1,     "Announce AFK kicks: 0=none, 1=everyone, 2=admins only");
         _cvMinPlayersMove = cv.CreateConVar("afk_move_min_players", 4,     "Minimum players required for move feature");
         _cvMinPlayersKick = cv.CreateConVar("afk_kick_min_players", 6,     "Minimum players required for kick feature");
         _cvAdminsImmune   = cv.CreateConVar("afk_admins_immune",    1,     "Admin immunity: 0=none, 1=full, 2=kick immunity, 3=move immunity");
         _cvAdminsPermission = cv.CreateConVar("afk_admins_permission", "",    "Admin permission required for AFK immunity (empty = any admin). IAdmin.HasPermission style: @afkmanager/immune, admin:slay etc.");
         _cvButtonsBuffer  = cv.CreateConVar("afk_buttons_buffer",   5,     "Distinct button-state changes to track before clearing AFK (0=disabled)");
-        _cvExcludeDead    = cv.CreateConVar("afk_exclude_dead",     false, "Exclude dead players from AFK checks");
-        _cvSpawnTime      = cv.CreateConVar("afk_spawn_time",       20,    "Seconds after spawn a player must begin moving (0=disabled)");
-        _cvWarnSpawnTime  = cv.CreateConVar("afk_spawn_warn_time",  15,    "Seconds before spawn-kick at which warning fires");
+        _cvExcludeDead    = cv.CreateConVar("afk_exclude_dead",     true,  "Exclude dead players from AFK checks");
+        _cvSpawnTime      = cv.CreateConVar("afk_spawn_time",       45,    "Seconds after spawn a player must begin moving (0=disabled)");
+        _cvWarnSpawnTime  = cv.CreateConVar("afk_spawn_warn_time",  15,    "Seconds before spawn-kick at which warning fires (warns every 5s during this window)");
 
         // Generate/load editable config at sharp/configs/afkmanager.cfg (NukoLevelRank style).
         var logger = bridge.LoggerFactory.CreateLogger("AfkManager.Config");
@@ -133,14 +133,14 @@ internal sealed class AfkConfig : IAfkConfig
     public int    MoveAnnounce   => _cvMoveAnnounce?.GetInt32() ?? 1;
     public int    TimeToKick     => _cvTimeToKick?.GetInt32() ?? 120;
     public int    WarnTimeToKick => _cvWarnTimeToKick?.GetInt32() ?? 30;
-    public int    KickMode       => _cvKickMode?.GetInt32()   ?? 1;
+    public int    KickMode       => _cvKickMode?.GetInt32()   ?? 2;
     public int    KickAnnounce   => _cvKickAnnounce?.GetInt32() ?? 1;
     public int    MinPlayersMove => _cvMinPlayersMove?.GetInt32() ?? 4;
     public int    MinPlayersKick => _cvMinPlayersKick?.GetInt32() ?? 6;
     public int    AdminsImmune   => _cvAdminsImmune?.GetInt32() ?? 1;
     public string AdminsPermission     => _cvAdminsPermission?.GetString() ?? "";
     public int    ButtonsBuffer  => _cvButtonsBuffer?.GetInt32() ?? 5;
-    public bool   ExcludeDead    => _cvExcludeDead?.GetBool()  ?? false;
-    public int    SpawnTime      => _cvSpawnTime?.GetInt32()   ?? 20;
+    public bool   ExcludeDead    => _cvExcludeDead?.GetBool()  ?? true;
+    public int    SpawnTime      => _cvSpawnTime?.GetInt32()   ?? 45;
     public int    WarnSpawnTime  => _cvWarnSpawnTime?.GetInt32() ?? 15;
 }
