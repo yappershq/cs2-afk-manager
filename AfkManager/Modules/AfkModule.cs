@@ -593,11 +593,15 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
 
         _logger.LogInformation("[AfkManager] Moving {Name} to spectator (AFK).", name);
 
-        // Move to spectator
+        // Move to spectator and slay if alive. SwitchTeam (IPlayerController) is documented
+        // as "Change team without slaying" — they end up in spec with their player pawn still
+        // alive at last position, which lets them keep contributing damage / blocking sight.
+        // ChangeTeam (the IBaseEntity engine call) does the engine-level team change that
+        // slays the pawn before moving them.
         var controller = client.GetPlayerController();
         if (controller is { IsValidEntity: true } && controller.Team != CStrikeTeam.Spectator)
         {
-            controller.SwitchTeam(CStrikeTeam.Spectator);
+            controller.ChangeTeam(CStrikeTeam.Spectator);
         }
 
         // Update tracking — reset AFK start from now so they can be kicked later
@@ -654,7 +658,9 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
     {
         var prefix = _bridge.LocalizeFor(client, "AFK_Prefix");
         var body   = _bridge.LocalizeFor(client, key, args);
-        client.Print(HudPrintChannel.Chat, $"{prefix} {body}");
+        // Locale uses {{color}} so it survives string.Format inside Locale.Text — the {color}
+        // literal that remains gets converted to engine chat escape codes here.
+        client.Print(HudPrintChannel.Chat, Utils.Format.ProcessColorCodes($"{prefix} {body}"));
     }
 
     private void BroadcastAnnouncement(int mode, IGameClient target, int slot, string key, params object?[] args)
