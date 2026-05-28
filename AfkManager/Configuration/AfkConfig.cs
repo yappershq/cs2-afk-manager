@@ -105,7 +105,7 @@ internal sealed class AfkConfig : IAfkConfig
         _cvMoveAnnounce   = cv.CreateConVar("afk_move_announce",    1,     "Announce AFK moves: 0=none, 1=everyone, 2=admins only");
         _cvTimeToKick     = cv.CreateConVar("afk_kick_time",        120,   "Seconds idle before kicking (0=disabled)");
         _cvWarnTimeToKick = cv.CreateConVar("afk_kick_warn_time",   30,    "Seconds before kick at which warning fires");
-        _cvKickMode       = cv.CreateConVar("afk_kick_mode",        2,     "Who to kick: 0=disabled, 1=all, 2=active teams only (skip spectators), 3=spectators only");
+        _cvKickMode       = cv.CreateConVar("afk_kick_mode",        0,     "Who to kick: 0=disabled (default), 1=all, 2=active teams only (skip spectators), 3=spectators only");
         _cvKickAnnounce   = cv.CreateConVar("afk_kick_announce",    1,     "Announce AFK kicks: 0=none, 1=everyone, 2=admins only");
         _cvMinPlayersMove = cv.CreateConVar("afk_move_min_players", 4,     "Minimum players required for move feature");
         _cvMinPlayersKick = cv.CreateConVar("afk_kick_min_players", 6,     "Minimum players required for kick feature");
@@ -133,7 +133,7 @@ internal sealed class AfkConfig : IAfkConfig
     public int    MoveAnnounce   => _cvMoveAnnounce?.GetInt32() ?? 1;
     public int    TimeToKick     => _cvTimeToKick?.GetInt32() ?? 120;
     public int    WarnTimeToKick => _cvWarnTimeToKick?.GetInt32() ?? 30;
-    public int    KickMode       => _cvKickMode?.GetInt32()   ?? 2;
+    public int    KickMode       => _cvKickMode?.GetInt32()   ?? 0;
     public int    KickAnnounce   => _cvKickAnnounce?.GetInt32() ?? 1;
     public int    MinPlayersMove => _cvMinPlayersMove?.GetInt32() ?? 4;
     public int    MinPlayersKick => _cvMinPlayersKick?.GetInt32() ?? 6;
