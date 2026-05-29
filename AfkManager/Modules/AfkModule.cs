@@ -439,7 +439,11 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
             return; // fully immune or not initialized
 
         var controller = client.GetPlayerController();
-        if (controller is not { IsValidEntity: true })
+        // IsValid() is the stricter live-state check (IsValidEntity is just the handle).
+        // Between death and respawn the controller can fail IsValid() while IsValidEntity
+        // still reports true, which used to slip dead spectating players through the
+        // dead-skip gate below.
+        if (controller is null || !controller.IsValid() || !controller.IsValidEntity)
             return;
 
         var team = controller.Team;
@@ -463,9 +467,13 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
             return;
         }
 
-        // Skip dead players if configured
+        // Skip dead players if configured.
+        // Treat "no live alive-pawn" as dead — covers the death-cam window where the
+        // player pawn is still around but in Dying/Dead LifeState, the brief gap between
+        // pawn destroy and observer pawn assignment, and any state where IsValid() fails.
         var pawn = controller.GetPlayerPawn();
-        if (_config.ExcludeDead && pawn is { IsAlive: false } && team != CStrikeTeam.Spectator)
+        var pawnAlive = pawn is not null && pawn.IsValid() && pawn.IsAlive;
+        if (_config.ExcludeDead && !pawnAlive && team != CStrikeTeam.Spectator)
         {
             _afkStartTime[slot] = now; // advance timer so dead time doesn't count
             return;
