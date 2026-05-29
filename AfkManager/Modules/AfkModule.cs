@@ -25,7 +25,7 @@ namespace AfkManager.Modules;
 /// AFK timers are checked every second via a game-frame accumulator rather than
 /// re-creating SourceMod TIMER_REPEAT handles (which have no equivalent in ModSharp).
 /// </summary>
-internal sealed class AfkModule : IModule, IClientListener, IGameListener, IEventListener
+internal sealed class AfkModule : IModule, IClientListener, IGameListener
 {
     // How often (seconds) we run the AFK check sweep.
     private const double CheckIntervalSec = 1.0;
@@ -58,6 +58,8 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener, IEven
     // Hook delegates kept alive
     private Action<IPlayerRunCommandHookParams, HookReturnValue<EmptyHookReturn>>? _runCmdPost;
     private Action<bool, bool, bool>?                                              _gameFramePost;
+    private Action<IPlayerKilledForwardParams>?                                    _playerKilledPost;
+    private Action<IPlayerSpawnForwardParams>?                                     _playerSpawnPost;
 
     // Admin command registration
     private bool                                    _usedAdminRegistry;
@@ -104,12 +106,14 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener, IEven
         _bridge.ClientManager.InstallClientListener(this);
         _bridge.ModSharp.InstallGameListener(this);
 
-        // Round reset is handled via IGameListener.OnRoundRestart (native engine forward,
-        // no event hook needed). Death / spawn don't have dedicated forwards so we still
-        // go through IEventListener for those.
-        _bridge.EventManager.InstallEventListener(this);
-        _bridge.EventManager.HookEvent("player_death");
-        _bridge.EventManager.HookEvent("player_spawn");
+        // Round reset is handled via IGameListener.OnRoundRestart (native engine forward).
+        // Player death / spawn use HookManager's typed forwards (PlayerKilledPost +
+        // PlayerSpawnPost) — no IEventListener / HookEvent indirection, params carry
+        // Client/Controller/Pawn directly.
+        _playerKilledPost = OnPlayerKilledPost;
+        _bridge.HookManager.PlayerKilledPost.InstallForward(_playerKilledPost);
+        _playerSpawnPost  = OnPlayerSpawnPost;
+        _bridge.HookManager.PlayerSpawnPost.InstallForward(_playerSpawnPost);
 
         _runCmdPost = OnRunCommandPost;
         _bridge.HookManager.PlayerRunCommand.InstallHookPost(_runCmdPost);
@@ -163,7 +167,18 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener, IEven
     {
         _bridge.ClientManager.RemoveClientListener(this);
         _bridge.ModSharp.RemoveGameListener(this);
-        _bridge.EventManager.RemoveEventListener(this);
+
+        if (_playerKilledPost is not null)
+        {
+            _bridge.HookManager.PlayerKilledPost.RemoveForward(_playerKilledPost);
+            _playerKilledPost = null;
+        }
+
+        if (_playerSpawnPost is not null)
+        {
+            _bridge.HookManager.PlayerSpawnPost.RemoveForward(_playerSpawnPost);
+            _playerSpawnPost = null;
+        }
 
         if (_runCmdPost is not null)
         {
@@ -368,34 +383,13 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener, IEven
         return ECommandAction.Skipped;
     }
 
-    // ===== IEventListener =====
+    // ===== HookManager forwards =====
 
-    int IEventListener.ListenerPriority => 0;
-    int IEventListener.ListenerVersion  => IEventListener.ApiVersion;
-
-    public void FireGameEvent(IGameEvent @event)
+    private void OnPlayerKilledPost(IPlayerKilledForwardParams p)
     {
         if (!_config.Enabled)
             return;
-
-        switch (@event)
-        {
-            case Sharp.Shared.GameEvents.IEventPlayerDeath death:
-                HandlePlayerDeath(death);
-                break;
-
-            case Sharp.Shared.GameEvents.IEventPlayerSpawn spawn:
-                HandlePlayerSpawn(spawn);
-                break;
-        }
-    }
-
-    private void HandlePlayerDeath(Sharp.Shared.GameEvents.IEventPlayerDeath ev)
-    {
-        var victim = ev.GetPlayerController("userid");
-        if (victim is null || !victim.IsValidEntity)
-            return;
-        var slot = (int)(byte)victim.PlayerSlot;
+        var slot = (int)(byte)p.Controller.PlayerSlot;
         if (slot < 0 || slot >= 64) return;
         if (_afkStartTime[slot] < 0) return; // fully immune
 
@@ -407,12 +401,11 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener, IEven
         _spawnTime[slot]    = -1;
     }
 
-    private void HandlePlayerSpawn(Sharp.Shared.GameEvents.IEventPlayerSpawn ev)
+    private void OnPlayerSpawnPost(IPlayerSpawnForwardParams p)
     {
-        var spawnee = ev.GetPlayerController("userid");
-        if (spawnee is null || !spawnee.IsValidEntity)
+        if (!_config.Enabled)
             return;
-        var slot = (int)(byte)spawnee.PlayerSlot;
+        var slot = (int)(byte)p.Controller.PlayerSlot;
         if (slot < 0 || slot >= 64) return;
         if (_afkStartTime[slot] < 0) return; // fully immune
 
