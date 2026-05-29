@@ -25,7 +25,7 @@ namespace AfkManager.Modules;
 /// AFK timers are checked every second via a game-frame accumulator rather than
 /// re-creating SourceMod TIMER_REPEAT handles (which have no equivalent in ModSharp).
 /// </summary>
-internal sealed class AfkModule : IModule, IClientListener, IGameListener
+internal sealed class AfkModule : IModule, IClientListener, IGameListener, IEventListener
 {
     // How often (seconds) we run the AFK check sweep.
     private const double CheckIntervalSec = 1.0;
@@ -104,6 +104,16 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
         _bridge.ClientManager.InstallClientListener(this);
         _bridge.ModSharp.InstallGameListener(this);
 
+        // Subscribe to game events that should reset / advance AFK timers:
+        //   round_start  → fresh slate for everyone
+        //   player_death → push the dying player's timer to "now" so the death
+        //                  itself doesn't trigger a move-to-spec on the next tick
+        //   player_spawn → reset the spawning player's timer (alive-clock starts fresh)
+        _bridge.EventManager.InstallEventListener(this);
+        _bridge.EventManager.HookEvent("round_start");
+        _bridge.EventManager.HookEvent("player_death");
+        _bridge.EventManager.HookEvent("player_spawn");
+
         _runCmdPost = OnRunCommandPost;
         _bridge.HookManager.PlayerRunCommand.InstallHookPost(_runCmdPost);
 
@@ -156,6 +166,7 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
     {
         _bridge.ClientManager.RemoveClientListener(this);
         _bridge.ModSharp.RemoveGameListener(this);
+        _bridge.EventManager.RemoveEventListener(this);
 
         if (_runCmdPost is not null)
         {
@@ -337,8 +348,74 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
         return ECommandAction.Skipped;
     }
 
-    // ===== Event handling via IEventListener =====
-    // We attach to game events via IEventManager in Init.
+    // ===== IEventListener =====
+
+    int IEventListener.ListenerPriority => 0;
+    int IEventListener.ListenerVersion  => IEventListener.ApiVersion;
+
+    public void FireGameEvent(IGameEvent @event)
+    {
+        if (!_config.Enabled)
+            return;
+
+        var now = _bridge.ModSharp.GetGlobals().CurTime;
+
+        switch (@event.Name)
+        {
+            case "round_start":
+                // Fresh slate for everyone. Don't touch fully-immune admins (timer = -1).
+                for (var i = 0; i < 64; i++)
+                {
+                    if (_afkStartTime[i] < 0) continue;
+                    _afkStartTime[i] = now;
+                    _spawnTime[i]    = -1;
+                    _isAfk[i]        = false;
+                    _isDead[i]       = false;
+                    _buttonBufIdx[i] = 0;
+                    for (var j = 0; j < ButtonsMaxArray; j++)
+                        _buttonBuf[i, j] = 0;
+                }
+                break;
+
+            case "player_death":
+            {
+                var victim = @event.GetPlayerController("userid");
+                if (victim is null || !victim.IsValidEntity)
+                    return;
+                var slot = (int)(byte)victim.PlayerSlot;
+                if (slot < 0 || slot >= 64) return;
+                if (_afkStartTime[slot] < 0) return; // fully immune
+
+                // Bury the alive-time the player just accrued — dead-skip will hold the
+                // timer steady from here, but if they were within the move-to-spec
+                // threshold the very next tick would have flipped them. Reset to now.
+                _afkStartTime[slot] = now;
+                _isDead[slot]       = true;
+                _spawnTime[slot]    = -1;
+                break;
+            }
+
+            case "player_spawn":
+            {
+                var spawnee = @event.GetPlayerController("userid");
+                if (spawnee is null || !spawnee.IsValidEntity)
+                    return;
+                var slot = (int)(byte)spawnee.PlayerSlot;
+                if (slot < 0 || slot >= 64) return;
+                if (_afkStartTime[slot] < 0) return; // fully immune
+
+                // Fresh alive-clock. Spawn-AFK check arms via _spawnTime if configured;
+                // currently unused but reserved for the spawn-warn flow.
+                _afkStartTime[slot] = now;
+                _spawnTime[slot]    = _config.SpawnTime > 0 ? now : -1;
+                _isAfk[slot]        = false;
+                _isDead[slot]       = false;
+                break;
+            }
+        }
+    }
+
+    // ===== (Old comment retained for context — events are now wired above) =====
 
     // ===== Player lifecycle =====
 
