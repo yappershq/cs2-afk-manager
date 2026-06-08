@@ -44,9 +44,13 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
     private readonly CStrikeTeam    []  _playerTeam       = new CStrikeTeam   [64];
     private readonly AhkImmunity    []  _immunity         = new AhkImmunity   [64];
     private readonly bool           []  _isAfk            = new bool           [64];
-    private readonly bool           []  _isDead           = new bool           [64]; // died this tick — reset next button change
+    private readonly bool           []  _isDead           = new bool           [64]; // died this tick — ignore killcam angle moves
     private readonly int            []  _buttonBufIdx     = new int            [64];
     private readonly int            [,] _buttonBuf        = new int            [64, ButtonsMaxArray];
+    // Mouse-movement (view-angle) detection: last command's pitch/yaw + whether a baseline is set.
+    private readonly float          []  _lastPitch        = new float          [64];
+    private readonly float          []  _lastYaw          = new float          [64];
+    private readonly bool           []  _hasAngle         = new bool           [64];
     // AFK spectator observer-mode tracking (detect target/mode changes = activity)
     private readonly int            []  _obsMode          = new int            [64]; // -1 = unknown
     private readonly int            []  _obsTargetSlot    = new int            [64]; // -1 = unknown
@@ -286,64 +290,46 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
         if (_afkStartTime[slot] < 0)
             return; // Not yet initialized
 
-        // --- Mouse movement detection ---
-        // The CS2 RunCommand hook does not expose raw mouse deltas like SourceMod's OnPlayerRunCmd
-        // (mouse[0], mouse[1]). Instead we detect movement via ChangedButtons having non-zero
-        // changes, which includes strafing and any key presses.
-        //
-        // For mouse look, CS2 sub-tick input history encodes angle changes per subtick.
-        // We sample the first InputHistory entry's ViewAngles and compare to a stored value.
-        // If angles changed the player is not AFK.
-        //
-        // NOTE: Full sub-tick angle tracking is complex. We use a lightweight heuristic:
-        // any button change OR any key held signals activity (standard CS2 AFK detection idiom).
-        // Pure mouse-look without any buttons pressed is a known limitation vs. SourceMod.
-        // TODO(localize): document this in plugin notes
+        // --- Mouse-movement (view-angle) detection ---
+        // Activity = the player's aim angles changed since the last command. We read the pawn's eye
+        // angles (X = pitch, Y = yaw), which track the command's view. This catches pure mouse-look
+        // with no keys pressed — a player actually playing is always moving their view. No button
+        // bookkeeping. Killcam angle changes while dead are ignored.
+        var pawn = param.Pawn;
+        if (pawn is null)
+            return;
 
-        var bufferSize = Math.Min(_config.ButtonsBuffer, ButtonsMaxArray);
-        var buttons    = (int)param.KeyButtons;
+        var ang   = pawn.GetEyeAngles();
+        var pitch = ang.X;
+        var yaw   = ang.Y;
 
-        if (bufferSize > 0)
+        if (!_hasAngle[slot])
         {
-            // Check if buttons have changed relative to last stored state
-            var lastIdx      = _buttonBufIdx[slot] == 0 ? (bufferSize - 1) : (_buttonBufIdx[slot] - 1);
-            var lastButtons  = bufferSize > 1 ? _buttonBuf[slot, lastIdx] : _buttonBuf[slot, 0];
-
-            if (lastButtons != buttons)
-            {
-                // Check if this button combo is already in the circular buffer
-                var found = false;
-                if (bufferSize > 1)
-                {
-                    for (var j = 0; j < bufferSize; j++)
-                    {
-                        if (_buttonBuf[slot, j] == buttons)
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-
-                _buttonBuf[slot, _buttonBufIdx[slot]] = buttons;
-                if (++_buttonBufIdx[slot] >= bufferSize)
-                    _buttonBufIdx[slot] = 0;
-
-                if (!found)
-                {
-                    if (!_isDead[slot])
-                    {
-                        MarkActive(slot);
-                    }
-                    else
-                    {
-                        // Player just died — suppress the first button change so death-cam
-                        // transitions don't reset AFK timer (mirrors SourceMod logic)
-                        _isDead[slot] = false;
-                    }
-                }
-            }
+            // Seed the baseline on the first command (or first after spawn) without counting it.
+            _lastPitch[slot] = pitch;
+            _lastYaw[slot]   = yaw;
+            _hasAngle[slot]  = true;
+            return;
         }
+
+        const float eps = 0.05f; // degrees — ignore float noise
+        var moved = MathF.Abs(pitch - _lastPitch[slot]) > eps
+                 || MathF.Abs(AngleDiff(yaw, _lastYaw[slot])) > eps;
+
+        _lastPitch[slot] = pitch;
+        _lastYaw[slot]   = yaw;
+
+        if (moved && !_isDead[slot])
+            MarkActive(slot);
+    }
+
+    // Smallest signed difference between two yaw angles, accounting for the -180/180 wrap.
+    private static float AngleDiff(float a, float b)
+    {
+        var d = a - b;
+        while (d >  180f) d -= 360f;
+        while (d < -180f) d += 360f;
+        return d;
     }
 
     // ===== IClientListener =====
@@ -414,6 +400,7 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
         _spawnTime[slot]    = _config.SpawnTime > 0 ? now : -1;
         _isAfk[slot]        = false;
         _isDead[slot]       = false;
+        _hasAngle[slot]     = false; // re-seed view-angle baseline (ignore the spawn view snap)
     }
 
     // ===== Player lifecycle =====
@@ -480,6 +467,7 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
         _buttonBufIdx [slot] = 0;
         _isDead       [slot] = false;
         _spawnTime    [slot] = -1;
+        _hasAngle     [slot] = false;
 
         if (full)
         {
