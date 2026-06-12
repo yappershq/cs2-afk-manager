@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AfkManager")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d77e9002f8c9e74d3385b39a17464e65efa9f77e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cbe89d22498d5d923fe61d1b36c3e51e4d70dc3e")]
 [assembly: System.Reflection.AssemblyProductAttribute("AfkManager")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AfkManager")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -693,11 +693,15 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
 
         _logger.LogInformation("[AfkManager] Kicking {Name} for AFK.", name);
 
-        // Kick
-        _bridge.ClientManager.KickClient(
-            client,
-            _bridge.LocalizeFor(client, "AFK_Kick_Message"),
-            NetworkDisconnectionReason.Kicked);
+        // Defer the kick to the end of the current frame instead of disconnecting
+        // mid-callback: tearing the client down while a snapshot for it is in flight
+        // races the engine's send path (SIGSEGV at libengine2 SendSnapshot, null netchan).
+        var kickMessage = _bridge.LocalizeFor(client, "AFK_Kick_Message");
+        _bridge.ModSharp.InvokeFrameAction(() =>
+        {
+            if (client.IsValid)
+                _bridge.ClientManager.KickClient(client, kickMessage, NetworkDisconnectionReason.Kicked);
+        });
     }
 
     // ===== Helpers =====
