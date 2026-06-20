@@ -665,14 +665,14 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
 
         _logger.LogInformation("[AfkManager] Moving {Name} to spectator (AFK).", name);
 
-        // Move to spectator and slay if alive. SwitchTeam (IPlayerController) is documented
-        // as "Change team without slaying" — they end up in spec with their player pawn still
-        // alive at last position, which lets them keep contributing damage / blocking sight.
-        // ChangeTeam (the IBaseEntity engine call) does the engine-level team change that
-        // slays the pawn before moving them.
+        // Slay the live pawn first (proper death — drops weapons, killfeed), then move to spectator.
         var controller = client.GetPlayerController();
         if (controller is { IsValidEntity: true } && controller.Team != CStrikeTeam.Spectator)
         {
+            var pawn = controller.GetPlayerPawn();
+            if (pawn is { IsValidEntity: true } && pawn.IsAlive)
+                pawn.Slay();
+
             controller.ChangeTeam(CStrikeTeam.Spectator);
         }
 
