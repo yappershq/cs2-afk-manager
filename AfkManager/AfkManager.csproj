@@ -6,10 +6,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.7" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.7" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Cross-plugin contract for in-game AdminPanel menu integration. Private=false:
+         AdminPanel ships AdminPanel.Shared.dll; we only need the type identity at compile
+         time, not a copy in our output (copying would risk a duplicate-assembly TypeLoad). -->
+    <ProjectReference Include="/home/claude/AdminPanel/AdminPanel.Shared/AdminPanel.Shared.csproj" Private="false" />
   </ItemGroup>
 
   <!-- Copy .assets/* (locales, particles, etc) into .build/ so modsharp-deploy bundles them -->

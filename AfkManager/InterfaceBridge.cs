@@ -1,4 +1,5 @@
 using System.IO;
+using AdminPanel.Shared;
 using Microsoft.Extensions.Logging;
 using Sharp.Modules.LocalizerManager.Shared;
 using Sharp.Modules.AdminManager.Shared;
@@ -28,6 +29,7 @@ internal sealed class InterfaceBridge
     // === Optional modules (resolved in OnAllModulesLoaded) ===
     internal ILocalizerManager? LocalizerManager { get; private set; }
     internal IAdminManager?     AdminManager     { get; private set; }
+    internal IAdminPanelShared? AdminPanel       { get; private set; }
 
     public InterfaceBridge(
         string          dllPath,
@@ -68,6 +70,21 @@ internal sealed class InterfaceBridge
             return;
 
         AdminManager = am;
+    }
+
+    /// <summary>
+    /// Resolve AdminPanel's published cross-plugin contract, if AdminPanel is installed.
+    /// Must be called in OnAllModulesLoaded (after all PostInits, where AdminPanel publishes).
+    /// Returns null silently when AdminPanel is absent — the plugin works standalone.
+    /// </summary>
+    internal void InitAdminPanel()
+    {
+        var iface = SharpModuleManager
+            .GetOptionalSharpModuleInterface<IAdminPanelShared>(IAdminPanelShared.Identity);
+        if (iface?.Instance is not { } panel)
+            return;
+
+        AdminPanel = panel;
     }
 
     /// <summary>

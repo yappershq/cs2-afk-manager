@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AdminPanel.Shared;
 using Microsoft.Extensions.Logging;
 using AfkManager.Configuration;
 using Sharp.Modules.AdminManager.Shared;
@@ -68,6 +69,10 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
     // Admin command registration
     private bool                                    _usedAdminRegistry;
     private IClientManager.DelegateClientCommand?   _fallbackAfkSpecCallback;
+
+    // AdminPanel in-game menu integration
+    private const string AdminPanelActionId = "afk.spec";
+    private bool         _adminPanelActionRegistered;
 
     // Master enable/disable (mirrored from ConVar to avoid repeated cvar reads inside tight loops)
     private bool _enabled;
@@ -165,6 +170,46 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
         // terminated with exit code 0 (this is exactly what crash-looped the server).
         // _enabled/_canMove/_canKick default to false (safe). They're refreshed in
         // OnGameActivate (fires after `sv` is set) and on every sweep, so nothing is needed here.
+
+        RegisterAdminPanelAction();
+    }
+
+    /// <summary>
+    /// Register a "Move to spectator" per-player action into AdminPanel's in-game menu, if
+    /// AdminPanel is installed. Null-guarded — when AdminPanel is absent the plugin still
+    /// works standalone via the !afk_spec command. The action reuses the existing
+    /// <see cref="TakeMoveAction"/> path (slay then ChangeTeam to spectator).
+    /// </summary>
+    private void RegisterAdminPanelAction()
+    {
+        var panel = _bridge.AdminPanel;
+        if (panel is null)
+            return;
+
+        panel.RegisterPlayerAction(new AdminPanelPlayerAction
+        {
+            Id         = AdminPanelActionId,
+            Label      = "Move to spectator",
+            Permission = "@afkmanager/spec",
+            SortOrder  = 100,
+            // Slots only; AdminPanel validates both in-game on the game thread before this fires.
+            OnSelected = (adminSlot, targetSlot) =>
+            {
+                if (targetSlot < 0 || targetSlot >= 64)
+                    return;
+
+                var target = _bridge.ClientManager.GetGameClient(new PlayerSlot((byte)targetSlot));
+                if (target is not { IsInGame: true })
+                    return;
+
+                TakeMoveAction(target, targetSlot, isSpawn: false);
+                _logger.LogInformation(
+                    "[AfkManager] AdminPanel action moved {Name} to spectator.", target.Name);
+            },
+        });
+
+        _adminPanelActionRegistered = true;
+        _logger.LogInformation("[AfkManager] AdminPanel available — 'Move to spectator' action registered");
     }
 
     public void Shutdown()
@@ -200,6 +245,12 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
 
         if (!_usedAdminRegistry && _fallbackAfkSpecCallback is not null)
             _bridge.ClientManager.RemoveCommandCallback("afk_spec", _fallbackAfkSpecCallback);
+
+        if (_adminPanelActionRegistered)
+        {
+            _bridge.AdminPanel?.Unregister(AdminPanelActionId);
+            _adminPanelActionRegistered = false;
+        }
     }
 
     // ===== IGameListener =====
