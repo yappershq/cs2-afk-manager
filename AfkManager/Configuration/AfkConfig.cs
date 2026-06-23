@@ -99,7 +99,7 @@ internal sealed class AfkConfig : IAfkConfig
         var cv = bridge.ConVarManager;
 
         _cvEnabled        = cv.CreateConVar("afk_enabled",          true,  "Enable AFK Manager [0=off, 1=on]");
-        _cvTimeToMove     = cv.CreateConVar("afk_move_time",        60,    "Seconds idle before moving to spectator (0=disabled)");
+        _cvTimeToMove     = cv.CreateConVar("afk_move_time",        75,    "Seconds idle before moving to spectator (0=disabled)");
         _cvWarnTimeToMove = cv.CreateConVar("afk_move_warn_time",   30,    "Seconds before move at which warning fires");
         _cvMoveToSpec     = cv.CreateConVar("afk_move_spec",        true,  "Move AFK players to spectator [0=off, 1=on]");
         _cvMoveAnnounce   = cv.CreateConVar("afk_move_announce",    1,     "Announce AFK moves: 0=none, 1=everyone, 2=admins only");
@@ -127,7 +127,7 @@ internal sealed class AfkConfig : IAfkConfig
     }
 
     public bool   Enabled        => _cvEnabled?.GetBool()     ?? true;
-    public int    TimeToMove     => _cvTimeToMove?.GetInt32() ?? 60;
+    public int    TimeToMove     => _cvTimeToMove?.GetInt32() ?? 75;
     public int    WarnTimeToMove => _cvWarnTimeToMove?.GetInt32() ?? 30;
     public bool   MoveToSpec     => _cvMoveToSpec?.GetBool()  ?? true;
     public int    MoveAnnounce   => _cvMoveAnnounce?.GetInt32() ?? 1;
