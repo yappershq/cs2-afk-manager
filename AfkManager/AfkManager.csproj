@@ -16,7 +16,7 @@
     <!-- Cross-plugin contract for in-game AdminPanel menu integration. Private=false:
          AdminPanel ships AdminPanel.Shared.dll; we only need the type identity at compile
          time, not a copy in our output (copying would risk a duplicate-assembly TypeLoad). -->
-    <ProjectReference Include="/home/claude/AdminPanel/AdminPanel.Shared/AdminPanel.Shared.csproj" Private="false" />
+    <PackageReference Include="YappersHQ.AdminPanel.Shared" Version="1.0.0" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <!-- Copy .assets/* (locales, particles, etc) into .build/ so modsharp-deploy bundles them -->

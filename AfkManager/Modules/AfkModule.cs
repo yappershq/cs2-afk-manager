@@ -150,7 +150,7 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
             registry.RegisterAdminCommand(
                 "afk_spec",
                 OnAfkSpecAdminCommand,
-                ["@afkmanager/spec"]);
+                ["afkmanager:spec"]);
 
             _usedAdminRegistry = true;
             _logger.LogInformation("[AfkManager] AdminManager available — !afk_spec registered with permission check");
@@ -190,7 +190,7 @@ internal sealed class AfkModule : IModule, IClientListener, IGameListener
         {
             Id         = AdminPanelActionId,
             Label      = "Move to spectator",
-            Permission = "@afkmanager/spec",
+            Permission = "afkmanager:spec",
             SortOrder  = 100,
             // Slots only; AdminPanel validates both in-game on the game thread before this fires.
             OnSelected = (adminSlot, targetSlot) =>
