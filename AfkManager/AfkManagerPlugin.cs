@@ -66,6 +66,7 @@ public sealed class AfkManagerPlugin : IModSharpModule
         // PostInits have finished before any OAM fires, so other plugins' interfaces are live.
         InterfaceBridge.Instance.InitLocalizer();
         InterfaceBridge.Instance.InitAdminManager();
+        InterfaceBridge.Instance.RegisterAdminPermissions();
         InterfaceBridge.Instance.InitAdminPanel();
 
         foreach (var module in _serviceProvider.GetServices<IModule>())

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using AdminPanel.Shared;
 using Microsoft.Extensions.Logging;
@@ -70,6 +72,27 @@ internal sealed class InterfaceBridge
             return;
 
         AdminManager = am;
+    }
+
+    /// <summary>
+    /// Register AfkManager's admin permission nodes so that AdminManager's wildcard ("*")
+    /// expansion and explicit grants can resolve them. Must be called after InitAdminManager.
+    /// </summary>
+    internal void RegisterAdminPermissions()
+    {
+        if (AdminManager is not { } am)
+            return;
+
+        am.MountAdminManifest("AfkManager", static () => new AdminTableManifest(
+            new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["afkmanager"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "afkmanager:spec",
+                },
+            },
+            [],
+            []));
     }
 
     /// <summary>
